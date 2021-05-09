@@ -15,14 +15,13 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 /**
  * @author anitc
  */
 public class MainForm extends javax.swing.JFrame {
-    static {
-        System.setProperty("webdriver.gecko.driver", "C:\\geckodriver.exe");
-    }
+    private static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(2);
     /**
      * Creates new form MainFoem
      */
@@ -109,7 +108,7 @@ public class MainForm extends javax.swing.JFrame {
             }
         });
 
-        txtClearCacheAuto.setText("Thoát");
+        txtClearCacheAuto.setText("Clear Auto");
         txtClearCacheAuto.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 txtClearCacheAutoActionPerformed(evt);
@@ -213,17 +212,19 @@ public class MainForm extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
-    private void txtClearCacheAutoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtClearCacheAutoActionPerformed
-        try {
-            System.out.println("vào hàm clear cache");
-            Runtime.getRuntime().exec("taskkill /F /IM chromedriver.exe");
-            Runtime.getRuntime().exec("taskkill /F /IM chrome.exe");
-            Runtime.getRuntime().exec("taskkill /F /IM conhost.exe");
-        }catch (IOException e) {
-            e.printStackTrace();
+    public void clear(){
+        while (1==1){
+            try {
+                Thread thread1 = new Thread(new ViewWeb());
+                thread1.start();
+                Thread.sleep(172000);
+            }catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
-        System.exit(0);
+    }
+    private void txtClearCacheAutoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtClearCacheAutoActionPerformed
+//        clear();
     }//GEN-LAST:event_txtClearCacheAutoActionPerformed
 
     private void txtClearCache1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtClearCache1ActionPerformed
@@ -243,71 +244,31 @@ public class MainForm extends javax.swing.JFrame {
     }
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {
-
-        try {
-            FirefoxOptions firefoxOptions = new FirefoxOptions();
-            firefoxOptions.setHeadless(true);
-            WebDriver driver = new FirefoxDriver(firefoxOptions);
-            driver.get("https://news88.org/truong-ngoc-anh-dien-ao-tam-nong-bong-tinh-tu-ben-ban-trai-tin-don/");
-        }catch (Exception ex){
-            System.out.println(ex.getMessage());
-        }
-
-        try {
-            jButton1.setEnabled(true);
-            String urlWebTarget = txtLinkWeb.getText();
-            int soLuong = Integer.parseInt(txtSoLuong.getText());
-            int soViewCanTang = Integer.parseInt(txtViewCanTang.getText());
-            AtomicInteger countView = new AtomicInteger();
-            AtomicInteger countThatBai = new AtomicInteger();
-            txtTrangThaiApp.setText("Đang Chay .....");
-            txtSoLuotViewDaChay.setText(0 + "/" + soViewCanTang);
-            txtSoLuotViewDaChay.paintImmediately(txtSoLuotViewDaChay.getVisibleRect());
-            if (soLuong>15){
-                soLuong =10 ;
-            }
-            if(soLuong<10){
-                soLuong = 8;
-            }
-            final ExecutorService executorService = Executors.newFixedThreadPool(soLuong);
-            if (soViewCanTang != -99) {
-                for (int i = 0; i < soViewCanTang; i++) {
-                    executorService.execute(() -> {
-                        if (ViewWeb.view("https://news88.org")) {
-                            countView.getAndIncrement();
-                            txtSoLuotViewDaChay.setText(countView + "/" + soViewCanTang);
-                            txtSoLuotViewDaChay.paintImmediately(txtSoLuotViewDaChay.getVisibleRect());
-                        }else {
-                            countThatBai.getAndIncrement();
+        System.out.println("vào tool");
+        String urlWeb = txtLinkWeb.getText();
+        int totalTab = 2;
+        BrowserConfig browserConfig = new BrowserConfig();
+        browserConfig.setupDriver();
+        AtomicInteger count = new AtomicInteger(0);
+        while (true) {
+            String url = urlWeb;
+            IntStream.range(0, totalTab).parallel().forEach(value -> {
+                EXECUTOR_SERVICE.submit(() -> {
+                    if (count.get() <= 2) {
+                        count.incrementAndGet();
+                        FirefoxDriver webDriver = browserConfig.geFireFoxWebDriver();
+                        try {
+                            browserConfig.handleIncreaseView(webDriver, url);
+                        } catch (Exception e) {
+//                            log.log(Level.WARNING, "MonitorServiceApplication >> Exception", e);
+                            System.out.println(e);
+                        } finally {
+                            count.decrementAndGet();
+                            webDriver.quit();
                         }
-                        if ((Integer.parseInt(countView.toString()) + (Integer.parseInt(countThatBai.toString())) == soViewCanTang)) {
-                            txtTrangThaiApp.setText("Đã Chạy Xong");
-                            txtTrangThaiApp.paintImmediately(txtTrangThaiApp.getVisibleRect());
-                            jButton1.setEnabled(true);
-                        }
-                    });
-                }
-            }else if(soViewCanTang == -99){
-                int i = 0;
-                while (i < 10000000){
-                    txtTrangThaiApp.setText("Đang Chay .....");
-                    txtSoLuotViewDaChay.setText(0 + "/" + soViewCanTang);
-                    ViewWeb.view(urlWebTarget);
-                    i++;
-                }
-            }
-        } catch (Exception exception) {
-            System.out.println(exception.getMessage());
-            jButton1.setEnabled(true);
-            JOptionPane.showMessageDialog(null, "Các Input đầu vào chưa hợp lệ");
-        }
-        finally {
-            try {
-                Thread thread1 = new Thread(new ViewWeb());
-                thread1.start();
-            }catch (Exception e) {
-                e.printStackTrace();
-            }
+                    }
+                });
+            });
         }
     }
 
